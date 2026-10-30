@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* Billock is a commercial font: drop Billock.woff2 / Billock.otf into /public/fonts to activate it */
+@font-face {
+  font-family: "Billock";
+  src:
+    url("/fonts/Billock.woff2") format("woff2"),
+    url("/fonts/Billock.otf") format("opentype");
+  font-display: swap;
+}
+
+@theme {
+  --color-brand: #ff3131;
+  --color-brand-600: #de2b2b;
+  --color-brand-950: #3f0000;
+
+  --font-display: "Big Shoulders Display", "Oswald", sans-serif;
+  --font-name: "Oswald", sans-serif;
+  --font-script: "Billock", "Mrs Saint Delafield", cursive;
+  --font-body: "Be Vietnam Pro", sans-serif;
+
+  --animate-marquee: marquee 35s linear infinite;
+  --animate-spin-slow: spin 18s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
+
+:root {
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+html {
+  scroll-behavior: smooth;
+  background: #000;
+}
+
+body {
+  @apply bg-black font-body text-white antialiased;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: #000;
+}
+
+/* Film-grain overlay over the whole site */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  background-image: var(--noise);
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+
+/* Dark cinematic stage background (matches the slides) */
+.bg-stage {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 22%, #2b1515 0%, #120707 45%, transparent 75%),
+    linear-gradient(180deg, #0a0606 0%, #000 100%);
+}
+
+.bg-stage-alt {
+  background:
+    radial-gradient(ellipse 60% 60% at 75% 30%, #1f0d0d 0%, transparent 70%),
+    linear-gradient(180deg, #0b0707 0%, #000 100%);
+}
+
+/* Red gradient headline with grain texture */
+.text-grain {
+  background-image:
+    var(--noise),
+    linear-gradient(180deg, #a51c1c 0%, #de2b2b 35%, #ff3131 62%, #3f0000 100%);
+  background-size: 220px 220px, 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-grain-flat {
+  background-image:
+    var(--noise),
+    linear-gradient(180deg, #ff3131 0%, #de2b2b 60%, #a51c1c 100%);
+  background-size: 220px 220px, 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-marquee, .animate-spin-slow { animation: none; }
+}
