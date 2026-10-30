@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { animate, motion, useInView, useScroll, useTransform } from "motion/react";
-import { profile, stats } from "../data";
+import { profile, stats, introVideo } from "../data";
 import { BigTitle, Reveal, Sparkle, ease } from "../components/ui";
 
 function Hero() {
@@ -9,6 +9,8 @@ function Hero() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const titleY = useTransform(scrollYProgress, [0, 1], ["0%", "25%"]);
   const fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const videoScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
+  const [reduceMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   const letter = (l: string, i: number) => (
     <motion.span
@@ -24,25 +26,49 @@ function Hero() {
 
   return (
     <section ref={ref} id="home" className="bg-stage relative flex min-h-svh items-center overflow-hidden">
+      <motion.div aria-hidden style={{ scale: videoScale }} className="absolute inset-0">
+        <motion.video
+          src={`/previews/${introVideo}-bg.mp4`}
+          poster={`/previews/${introVideo}.webp`}
+          autoPlay={!reduceMotion}
+          muted
+          loop
+          playsInline
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.45 }}
+          transition={{ duration: 2, delay: 0.3 }}
+          className="size-full object-cover grayscale-[30%]"
+        />
+        {/* Tint + vignette keep the red title and white text readable over the footage */}
+        <div className="absolute inset-0 bg-brand-950/40 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#000_85%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
+      </motion.div>
+
       <div className="relative mx-auto w-full max-w-[1600px] px-4 pt-28 pb-16 md:px-10 md:pt-24">
+        {/* w-fit wrapper so the name row shares PORTFOLIO's left/right edges */}
+        <div className="mx-auto w-fit">
         <motion.h1
           style={{ y: titleY, opacity: fade }}
           aria-label={`Portfolio ${profile.year}`}
-          className="flex items-start justify-center font-display text-[24vw] leading-[0.8] font-extrabold uppercase select-none 2xl:text-[380px]"
+          className="flex items-start justify-center font-display text-[24vw] leading-[0.8] font-extrabold tracking-[-0.05em] uppercase select-none 2xl:text-[380px]"
         >
           {"PORTFOL".split("").map(letter)}
-          <motion.span
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.1, duration: 1 }}
-            className="mx-[0.4vw] mt-[0.6vw] flex flex-col font-body text-[2.4vw] leading-[1.05] font-extralight text-white/80 2xl:text-[38px]"
-          >
-            {profile.year.split("").map((d, i) => (
-              <span key={i}>{d}</span>
-            ))}
-          </motion.span>
-          {"IO".split("").map((l, i) => letter(l, i + 7))}
+          <span className="relative">
+            {letter("I", 7)}
+            <motion.span
+              aria-hidden
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.1, duration: 1 }}
+              className="absolute inset-x-0 top-[12%] flex translate-x-[0.6vw] flex-col items-center gap-[0.5vw] font-body text-[2.4vw] leading-none font-light tracking-normal text-white 2xl:translate-x-[9px] 2xl:gap-2 2xl:text-[38px]"
+            >
+              {profile.year.split("").map((d, i) => (
+                <span key={i}>{d}</span>
+              ))}
+            </motion.span>
+          </span>
+          {letter("O", 8)}
         </motion.h1>
 
         <div className="relative z-10 mt-8 flex flex-col gap-10 md:-mt-[12vw] md:flex-row md:items-start md:justify-between 2xl:-mt-[190px]">
@@ -50,7 +76,6 @@ function Hero() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9, duration: 1, ease }}
-            className="md:pl-[2vw]"
           >
             <p className="-mb-2 font-script text-5xl text-white md:text-[5.2vw] md:leading-none 2xl:text-[80px]">
               Hello, I'm
@@ -66,7 +91,7 @@ function Hero() {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 1.2, duration: 1, ease }}
-            className="flex items-center gap-5 md:mt-[4vw] md:mr-[5vw]"
+            className="flex items-center gap-5 md:mt-[10vw] md:mr-[3vw]"
           >
             <span className="relative grid size-16 shrink-0 place-items-center rounded-full border border-white/80 md:size-[4.8vw] 2xl:size-[72px]">
               <Sparkle className="size-4 text-white md:size-[1.2vw] 2xl:size-5" />
@@ -78,6 +103,7 @@ function Hero() {
               {profile.tagline[1]}
             </p>
           </motion.div>
+        </div>
         </div>
       </div>
 
@@ -199,15 +225,45 @@ function About() {
   );
 }
 
-function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
 
-  // No backend: open the visitor's mail client with the message prefilled
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
+function Contact() {
+  const empty = { name: "", email: "", message: "" };
+  const [form, setForm] = useState(empty);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const openMailClient = () => {
     const subject = encodeURIComponent(`Project enquiry from ${form.name}`);
     const body = encodeURIComponent(`${form.message}\n\n— ${form.name} (${form.email})`);
     window.location.href = `mailto:${profile.email}?subject=${subject}&body=${body}`;
+  };
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!WEB3FORMS_KEY) return openMailClient();
+
+    const botcheck = new FormData(e.currentTarget).get("botcheck");
+    setStatus("sending");
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `New project enquiry from ${form.name}`,
+          from_name: "Portfolio Website",
+          replyto: form.email,
+          botcheck,
+          ...form,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      setStatus("sent");
+      setForm(empty);
+    } catch {
+      setStatus("error");
+    }
   };
 
   const field =
@@ -275,13 +331,29 @@ function Contact() {
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
             />
+            {/* Honeypot: hidden from people, bots fill it and get rejected */}
+            <input type="checkbox" name="botcheck" className="hidden" tabIndex={-1} autoComplete="off" />
             <button
               type="submit"
-              className="group mt-4 flex w-full items-center justify-center gap-3 rounded-full bg-brand py-4 font-body text-sm font-medium uppercase tracking-[0.3em] text-black transition hover:bg-white"
+              disabled={status === "sending"}
+              className="group mt-4 flex w-full items-center justify-center gap-3 rounded-full bg-brand py-4 font-body text-sm font-medium uppercase tracking-[0.3em] text-black transition hover:bg-white disabled:cursor-wait disabled:opacity-70"
             >
-              Send Message
-              <Sparkle className="size-3 transition-transform duration-500 group-hover:rotate-180" />
+              {status === "sending" ? "Sending…" : "Send Message"}
+              <Sparkle
+                className={`size-3 transition-transform duration-500 group-hover:rotate-180 ${status === "sending" ? "animate-spin" : ""}`}
+              />
             </button>
+            <p aria-live="polite" className="min-h-5 text-center font-body text-sm font-light">
+              {status === "sent" && <span className="text-white">Thanks! Your message has been sent — I'll get back to you soon.</span>}
+              {status === "error" && (
+                <span className="text-brand">
+                  Something went wrong.{" "}
+                  <button type="button" onClick={openMailClient} className="underline underline-offset-4 hover:text-white">
+                    Email me directly
+                  </button>
+                </span>
+              )}
+            </p>
           </form>
         </Reveal>
       </div>

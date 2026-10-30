@@ -1,107 +1,103 @@
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { brands, categories, projects, type Project } from "../data";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import { brands, categories, projects, showreelUrl, type Project } from "../data";
 import { BigTitle, Reveal, ease } from "../components/ui";
 
-function ProjectCard({ project, index, onPlay }: { project: Project; index: number; onPlay: () => void }) {
-  const thumb =
-    project.thumbnail ?? (project.youtubeId ? `https://i.ytimg.com/vi/${project.youtubeId}/hqdefault.jpg` : undefined);
-  const playable = Boolean(project.youtubeId);
+const canHover = () => window.matchMedia("(hover: hover)").matches;
 
+function InstagramIcon({ className = "" }: { className?: string }) {
   return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.6, delay: (index % 3) * 0.08, ease }}
-      className="group"
-    >
-      <button
-        type="button"
-        onClick={playable ? onPlay : undefined}
-        disabled={!playable}
-        aria-label={playable ? `Play ${project.title}` : project.title}
-        className="relative block aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_30%_20%,#3f0000_0%,#120606_55%,#000_100%)] text-left enabled:cursor-pointer"
-      >
-        {thumb ? (
-          <img
-            src={thumb}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 size-full object-cover opacity-80 transition duration-700 group-hover:scale-105 group-hover:opacity-100"
-          />
-        ) : (
-          <span className="text-grain-flat absolute right-4 bottom-0 font-display text-[7rem] leading-[0.8] font-extrabold opacity-40 transition duration-700 group-hover:opacity-80">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-        )}
-        <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-        <span className="absolute top-4 left-4 rounded-full border border-white/20 bg-black/40 px-3 py-1 font-body text-[10px] uppercase tracking-[0.3em] backdrop-blur">
-          {project.category}
-        </span>
-        {playable && (
-          <span className="absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 scale-75 place-items-center rounded-full bg-brand opacity-0 transition duration-500 group-hover:scale-100 group-hover:opacity-100">
-            <svg viewBox="0 0 24 24" className="ml-1 size-6 fill-black" aria-hidden>
-              <path d="M6 4l14 8-14 8z" />
-            </svg>
-          </span>
-        )}
-      </button>
-      <div className="mt-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-name text-xl font-medium uppercase transition-colors group-hover:text-brand md:text-2xl">
-            {project.title}
-          </h3>
-          <p className="font-body text-sm font-light text-white/50">{project.client}</p>
-        </div>
-        <span className="font-body text-sm font-extralight text-white/50">{project.year}</span>
-      </div>
-    </motion.article>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" />
+    </svg>
   );
 }
 
-function Lightbox({ videoId, onClose }: { videoId: string; onClose: () => void }) {
+function ProjectCard({ project, index }: { project: Project; index: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const near = useInView(videoRef, { once: true, margin: "300px" });
+  const inView = useInView(videoRef, { amount: 0.6 });
+  const [playing, setPlaying] = useState(false);
+  const wide = project.orientation === "horizontal";
+
+  const play = () => {
+    videoRef.current?.play().then(() => setPlaying(!videoRef.current?.paused)).catch(() => {});
+  };
+  const stop = () => {
+    const v = videoRef.current;
+    if (!v || v.paused) return;
+    // load() rewinds and shows the poster again instead of a black first frame
+    v.load();
+    setPlaying(false);
+  };
+
+  // Touch devices have no hover, so autoplay while the card is on screen
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+    if (canHover()) return;
+    if (inView) play();
+    else stop();
+  }, [inView]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[70] grid place-items-center bg-black/90 p-4 backdrop-blur-sm"
+    <motion.a
+      layout
+      href={project.instagram}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${project.title} — watch on Instagram`}
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.6, delay: (index % 4) * 0.08, ease }}
+      onMouseEnter={() => canHover() && play()}
+      onMouseLeave={() => canHover() && stop()}
+      onFocus={play}
+      onBlur={stop}
+      className={`group relative block overflow-hidden rounded-2xl border border-white/10 bg-black outline-none focus-visible:border-brand ${
+        wide ? "col-span-full aspect-video md:aspect-[21/9]" : "aspect-[9/16]"
+      }`}
     >
-      <button onClick={onClose} className="absolute top-6 right-6 font-body text-sm uppercase tracking-[0.3em] hover:text-brand">
-        Close ✕
-      </button>
-      <motion.div
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-        exit={{ scale: 0.9 }}
-        transition={{ ease }}
-        onClick={(e) => e.stopPropagation()}
-        className="aspect-video w-full max-w-6xl overflow-hidden rounded-2xl border border-white/10"
-      >
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`}
-          title="Project video"
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
-          className="size-full"
-        />
-      </motion.div>
-    </motion.div>
+      <video
+        ref={videoRef}
+        src={`/previews/${project.video}.mp4`}
+        poster={`/previews/${project.video}.webp`}
+        preload={near ? "auto" : "none"}
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-[1.03]"
+      />
+      <span
+        className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/30 transition-opacity duration-500 ${
+          playing ? "opacity-60" : "opacity-100"
+        }`}
+      />
+
+      <span className="absolute top-4 left-4 rounded-full border border-white/20 bg-black/40 px-3 py-1 font-body text-[10px] uppercase tracking-[0.3em] backdrop-blur">
+        {project.category}
+      </span>
+      <span className="absolute top-4 right-4 flex translate-y-[-6px] items-center gap-2 rounded-full bg-brand px-3 py-1.5 font-body text-[10px] font-medium uppercase tracking-[0.2em] text-black opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+        <InstagramIcon className="size-3.5" />
+        View ↗
+      </span>
+
+      {!playing && (
+        <span className="absolute top-1/2 left-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/60 backdrop-blur-sm">
+          <svg viewBox="0 0 24 24" className="ml-0.5 size-5 fill-white" aria-hidden>
+            <path d="M6 4l14 8-14 8z" />
+          </svg>
+        </span>
+      )}
+
+      <span className="absolute inset-x-0 bottom-0 p-5 md:p-6">
+        <span className="block font-name text-xl leading-tight font-semibold uppercase transition-colors group-hover:text-brand md:text-2xl">
+          {project.title}
+        </span>
+        <span className="mt-1 block font-body text-sm font-light text-white/60">{project.client}</span>
+      </span>
+    </motion.a>
   );
 }
 
@@ -152,7 +148,6 @@ function Brands() {
 
 export default function Portfolio() {
   const [filter, setFilter] = useState<(typeof categories)[number]>("All");
-  const [video, setVideo] = useState<string | null>(null);
   const shown = filter === "All" ? projects : projects.filter((p) => p.category === filter);
 
   return (
@@ -161,10 +156,26 @@ export default function Portfolio() {
         <div className="mx-auto max-w-[1600px] px-5 md:px-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <BigTitle kicker="Selected Work">Portfolio</BigTitle>
-            <Reveal delay={0.2}>
-              <p className="max-w-sm font-body text-base font-extralight text-white/70 md:mb-6 md:text-right">
+            <Reveal delay={0.2} className="flex flex-col gap-6 md:mb-6 md:items-end">
+              <p className="max-w-sm font-body text-base font-extralight text-white/70 md:text-right">
                 Commercials, films, OTT and digital content — edited, graded and finished for real impact.
               </p>
+              <a
+                href={showreelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex w-fit items-center gap-4 rounded-full border border-white/20 bg-black/40 py-2 pr-6 pl-2 backdrop-blur transition hover:border-brand"
+              >
+                <span className="relative grid size-11 place-items-center rounded-full bg-brand transition-transform duration-500 group-hover:scale-110">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-brand/40" />
+                  <svg viewBox="0 0 24 24" className="relative ml-0.5 size-4 fill-black" aria-hidden>
+                    <path d="M6 4l14 8-14 8z" />
+                  </svg>
+                </span>
+                <span className="font-body text-xs font-medium uppercase tracking-[0.3em] transition-colors group-hover:text-brand">
+                  Watch Showreel ↗
+                </span>
+              </a>
             </Reveal>
           </div>
 
@@ -188,10 +199,10 @@ export default function Portfolio() {
             </div>
           </Reveal>
 
-          <motion.div layout className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          <motion.div layout className="mt-12 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
             <AnimatePresence mode="popLayout">
               {shown.map((p, i) => (
-                <ProjectCard key={p.title} project={p} index={i} onPlay={() => setVideo(p.youtubeId!)} />
+                <ProjectCard key={p.video} project={p} index={i} />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -199,8 +210,6 @@ export default function Portfolio() {
       </section>
 
       <Brands />
-
-      <AnimatePresence>{video && <Lightbox videoId={video} onClose={() => setVideo(null)} />}</AnimatePresence>
     </main>
   );
 }

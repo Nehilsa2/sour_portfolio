@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { profile } from "../data";
+import { credit, profile } from "../data";
 
 export default function Footer() {
   return (
@@ -24,6 +24,19 @@ export default function Footer() {
         </ul>
         <p className="font-body text-xs font-light text-white/40">
           © {new Date().getFullYear()} {profile.firstName} {profile.lastName}. All rights reserved.
+        </p>
+      </div>
+      <div className="border-t border-white/5">
+        <p className="mx-auto max-w-[1600px] px-5 py-4 text-center font-body text-[11px] font-light uppercase tracking-[0.3em] text-white/35 md:px-10">
+          Designed &amp; Developed by{" "}
+          <a
+            href={credit.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-white/70 transition-colors hover:text-brand"
+          >
+            {credit.name}
+          </a>
         </p>
       </div>
     </footer>

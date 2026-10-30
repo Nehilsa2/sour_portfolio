@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import CornerLoader from "./components/CornerLoader";
 import Home from "./pages/Home";
 import Portfolio from "./pages/Portfolio";
 import Services from "./pages/Services";
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="*" element={<Home />} />
       </Routes>
       <Footer />
+      <CornerLoader />
     </>
   );
 }
