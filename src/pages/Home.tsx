@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { animate, motion, useInView, useScroll, useTransform } from "motion/react";
-import { profile, stats, introVideo } from "../data";
+import { profile, stats } from "../data";
 import { BigTitle, Reveal, Sparkle, ease } from "../components/ui";
 
 function Hero() {
@@ -9,8 +9,6 @@ function Hero() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const titleY = useTransform(scrollYProgress, [0, 1], ["0%", "25%"]);
   const fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const videoScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
-  const [reduceMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   const letter = (l: string, i: number) => (
     <motion.span
@@ -26,25 +24,6 @@ function Hero() {
 
   return (
     <section ref={ref} id="home" className="bg-stage relative flex min-h-svh items-center overflow-hidden">
-      <motion.div aria-hidden style={{ scale: videoScale }} className="absolute inset-0">
-        <motion.video
-          src={`/previews/${introVideo}-bg.mp4`}
-          poster={`/previews/${introVideo}.webp`}
-          autoPlay={!reduceMotion}
-          muted
-          loop
-          playsInline
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.45 }}
-          transition={{ duration: 2, delay: 0.3 }}
-          className="size-full object-cover grayscale-[30%]"
-        />
-        {/* Tint + vignette keep the red title and white text readable over the footage */}
-        <div className="absolute inset-0 bg-brand-950/40 mix-blend-multiply" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#000_85%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
-      </motion.div>
-
       <div className="relative mx-auto w-full max-w-[1600px] px-4 pt-28 pb-16 md:px-10 md:pt-24">
         {/* w-fit wrapper so the name row shares PORTFOLIO's left/right edges */}
         <div className="mx-auto w-fit">
